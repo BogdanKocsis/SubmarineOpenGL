@@ -32,5 +32,17 @@
     <None Include="Grass.vs">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="6.2.cubemaps.fs">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="6.2.cubemaps.vs">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="6.2.skybox.fs">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="6.2.skybox.vs">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
