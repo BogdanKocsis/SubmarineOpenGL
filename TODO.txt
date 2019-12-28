@@ -1,1 +1,3 @@
--move Camera to new file
+(x) move Camera to new file 
+( ) combine skybox with cube
+( ) move shaders to correct folders

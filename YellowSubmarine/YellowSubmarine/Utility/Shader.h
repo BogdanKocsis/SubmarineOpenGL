@@ -11,6 +11,7 @@ public:
 	unsigned int m_ID;
 
 	Shader(const char* vertexPath, const char* fragmentPath); // constructor generates the shader on the fly
+	Shader(const std::string vertexPath, const std::string fragmentPath);
 	~Shader();
 
 	void Use() const; // activate the shader
@@ -33,6 +34,7 @@ public:
 private:
 
 	void Init(const char* vertexPath, const char* fragmentPath);
+	void Init(std::string vertexPath, std::string fragmentPath);
 	void CheckCompileErrors(unsigned int shader, std::string type); // utility function for checking shader compilation/linking errors.
 
 };
