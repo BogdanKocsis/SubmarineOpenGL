@@ -7,348 +7,40 @@
 
 //#include "pch.h"
 
+//GL
 #include <GL/glew.h>
 
+//GLM
 #define GLM_FORCE_CTOR_INIT 
 #include <GLM.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 
+//GLFW
 #include <glfw3.h>
 
 #include <iostream>
 #include <fstream>
-#include <sstream>
+//#include <sstream>	//e in Shader
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
 #include <vector>	//pt. cubemap la skybox
 
 #pragma comment (lib, "glfw3dll.lib")
 #pragma comment (lib, "glew32.lib")
 #pragma comment (lib, "OpenGL32.lib")
 
+#include "Utility/Shader.h"
+#include "Utility/Camera.h"
+
 // settings
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
-enum ECameraMovementType
-{
-	UNKNOWN,
-	FORWARD,
-	BACKWARD,
-	LEFT,
-	RIGHT,
-	UP,
-	DOWN
-};
-
-class Camera
-{
-private:
-	// Default camera values
-	const float zNEAR = 0.1f;
-	const float zFAR = 100.f;
-	const float YAW = -90.0f;
-	const float PITCH = 0.0f;
-	const float FOV = 45.0f;
-	glm::vec3 startPosition;
-
-public:
-	Camera(const int width, const int height, const glm::vec3& position) {
-		startPosition = position;
-		Set(width, height, position);
-	}
-
-	void Set(const int width, const int height, const glm::vec3& position) {
-		this->isPerspective = true;
-		this->yaw = YAW;
-		this->pitch = PITCH;
-
-		this->FoVy = FOV;
-		this->width = width;
-		this->height = height;
-		this->zNear = zNEAR;
-		this->zFar = zFAR;
-
-		this->worldUp = glm::vec3(0, 1, 0);
-		this->position = position;
-
-		lastX = width / 2.0f;
-		lastY = height / 2.0f;
-		bFirstMouseMove = true;
-
-		UpdateCameraVectors();
-	}
-
-	void Reset(const int width, const int height) {
-		Set(width, height, startPosition);
-	}
-
-	void Reshape(int windowWidth, int windowHeight) {
-		width = windowWidth;
-		height = windowHeight;
-
-		// define the viewport transformation
-		glViewport(0, 0, windowWidth, windowHeight);
-	}
-
-	const glm::mat4 GetViewMatrix() const {
-		// Returns the View Matrix
-		return glm::lookAt(position, position + forward, up);
-	}
-
-	const glm::vec3 GetPosition() const {
-		return position;
-	}
-
-	const glm::mat4 GetProjectionMatrix() const {
-		glm::mat4 Proj = glm::mat4(1);
-		if (isPerspective) {
-			float aspectRatio = ((float)(width)) / height;
-			Proj = glm::perspective(glm::radians(FoVy), aspectRatio, zNear, zFar);
-		} else {
-			float scaleFactor = 2000.f;
-			Proj = glm::ortho<float>(
-				-width / scaleFactor, width / scaleFactor,
-				-height / scaleFactor, height / scaleFactor, -zFar, zFar);
-		}
-		return Proj;
-	}
-
-	void ProcessKeyboard(ECameraMovementType direction, float deltaTime) {
-		float velocity = (float)(cameraSpeedFactor * deltaTime);
-		switch (direction) {
-			case ECameraMovementType::FORWARD:
-				position += forward * velocity;
-				break;
-			case ECameraMovementType::BACKWARD:
-				position -= forward * velocity;
-				break;
-			case ECameraMovementType::LEFT:
-				position -= right * velocity;
-				break;
-			case ECameraMovementType::RIGHT:
-				position += right * velocity;
-				break;
-			case ECameraMovementType::UP:
-				position += up * velocity;
-				break;
-			case ECameraMovementType::DOWN:
-				position -= up * velocity;
-				break;
-		}
-	}
-
-	void MouseControl(float xPos, float yPos) {
-		if (bFirstMouseMove) {
-			lastX = xPos;
-			lastY = yPos;
-			bFirstMouseMove = false;
-		}
-
-		float xChange = xPos - lastX;
-		float yChange = lastY - yPos;
-		lastX = xPos;
-		lastY = yPos;
-
-		if (fabs(xChange) <= 1e-6 && fabs(yChange) <= 1e-6) {
-			return;
-		}
-		xChange *= mouseSensitivity;
-		yChange *= mouseSensitivity;
-
-		ProcessMouseMovement(xChange, yChange);
-	}
-
-	void ProcessMouseScroll(float yOffset) {
-		if (FoVy >= 1.0f && FoVy <= 90.0f) {
-			FoVy -= yOffset;
-		}
-		if (FoVy <= 1.0f)
-			FoVy = 1.0f;
-		if (FoVy >= 90.0f)
-			FoVy = 90.0f;
-	}
-
-private:
-	void ProcessMouseMovement(float xOffset, float yOffset, bool constrainPitch = true) {
-		yaw += xOffset;
-		pitch += yOffset;
-
-		//std::cout << "yaw = " << yaw << std::endl;
-		//std::cout << "pitch = " << pitch << std::endl;
-
-		// Avem grijã sã nu ne dãm peste cap
-		if (constrainPitch) {
-			if (pitch > 89.0f)
-				pitch = 89.0f;
-			if (pitch < -89.0f)
-				pitch = -89.0f;
-		}
-
-		// Se modificã vectorii camerei pe baza unghiurilor Euler
-		UpdateCameraVectors();
-	}
-
-	void UpdateCameraVectors() {
-		// Calculate the new forward vector
-		this->forward.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-		this->forward.y = sin(glm::radians(pitch));
-		this->forward.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-		this->forward = glm::normalize(this->forward);
-		// Also re-calculate the Right and Up vector
-		right = glm::normalize(glm::cross(forward, worldUp));  // Normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-		up = glm::normalize(glm::cross(right, forward));
-	}
-
-protected:
-	const float cameraSpeedFactor = 2.5f;
-	const float mouseSensitivity = 0.1f;
-
-	// Perspective properties
-	float zNear;
-	float zFar;
-	float FoVy;
-	int width;
-	int height;
-	bool isPerspective;
-
-	glm::vec3 position;
-	glm::vec3 forward;
-	glm::vec3 right;
-	glm::vec3 up;
-	glm::vec3 worldUp;
-
-	// Euler Angles
-	float yaw;
-	float pitch;
-
-	bool bFirstMouseMove = true;
-	float lastX = 0.f, lastY = 0.f;
-};
-
-class Shader
-{
-public:
-	// constructor generates the shader on the fly
-	// ------------------------------------------------------------------------
-	Shader(const char* vertexPath, const char* fragmentPath) {
-		Init(vertexPath, fragmentPath);
-	}
-
-	~Shader() {
-		glDeleteProgram(ID);
-	}
-
-	// activate the shader
-	// ------------------------------------------------------------------------
-	void Use() const {
-		glUseProgram(ID);
-	}
-
-	unsigned int GetID() const { return ID; }
-
-	// MVP
-	unsigned int loc_model_matrix;
-	unsigned int loc_view_matrix;
-	unsigned int loc_projection_matrix;
-
-	// utility uniform functions
-	void SetInt(const std::string& name, int value) const {
-		glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
-	}
-	void SetFloat(const std::string& name, const float& value) const {
-		glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
-	}
-	void SetVec3(const std::string& name, const glm::vec3& value) const {
-		glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
-	}
-	void SetVec3(const std::string& name, float x, float y, float z) const {
-		glUniform3f(glGetUniformLocation(ID, name.c_str()), x, y, z);
-	}
-	void SetMat4(const std::string& name, const glm::mat4& mat) const {
-		glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
-	}
-
-private:
-	void Init(const char* vertexPath, const char* fragmentPath) {
-		// 1. retrieve the vertex/fragment source code from filePath
-		std::string vertexCode;
-		std::string fragmentCode;
-		std::ifstream vShaderFile;
-		std::ifstream fShaderFile;
-		// ensure ifstream objects can throw exceptions:
-		vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		try {
-			// open files
-			vShaderFile.open(vertexPath);
-			fShaderFile.open(fragmentPath);
-			std::stringstream vShaderStream, fShaderStream;
-			// read file's buffer contents into streams
-			vShaderStream << vShaderFile.rdbuf();
-			fShaderStream << fShaderFile.rdbuf();
-			// close file handlers
-			vShaderFile.close();
-			fShaderFile.close();
-			// convert stream into string
-			vertexCode = vShaderStream.str();
-			fragmentCode = fShaderStream.str();
-		}
-		catch (std::ifstream::failure e) {
-			std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
-		}
-		const char* vShaderCode = vertexCode.c_str();
-		const char* fShaderCode = fragmentCode.c_str();
-
-		// 2. compile shaders
-		unsigned int vertex, fragment;
-		// vertex shader
-		vertex = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(vertex, 1, &vShaderCode, NULL);
-		glCompileShader(vertex);
-		CheckCompileErrors(vertex, "VERTEX");
-		// fragment Shader
-		fragment = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragment, 1, &fShaderCode, NULL);
-		glCompileShader(fragment);
-		CheckCompileErrors(fragment, "FRAGMENT");
-		// shader Program
-		ID = glCreateProgram();
-		glAttachShader(ID, vertex);
-		glAttachShader(ID, fragment);
-		glLinkProgram(ID);
-		CheckCompileErrors(ID, "PROGRAM");
-
-		// 3. delete the shaders as they're linked into our program now and no longer necessery
-		glDeleteShader(vertex);
-		glDeleteShader(fragment);
-	}
-
-	// utility function for checking shader compilation/linking errors.
-	// ------------------------------------------------------------------------
-	void CheckCompileErrors(unsigned int shader, std::string type) {
-		GLint success;
-		GLchar infoLog[1024];
-		if (type != "PROGRAM") {
-			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-			if (!success) {
-				glGetShaderInfoLog(shader, 1024, NULL, infoLog);
-				std::cout << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
-			}
-		} else {
-			glGetProgramiv(shader, GL_LINK_STATUS, &success);
-			if (!success) {
-				glGetProgramInfoLog(shader, 1024, NULL, infoLog);
-				std::cout << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
-			}
-		}
-	}
-private:
-	unsigned int ID;
-};
+// timing
+double deltaTime = 0.0f;    // time between current frame and last frame
+double lastFrame = 0.0f;
 
 Camera* pCamera = nullptr;
 
@@ -356,27 +48,91 @@ void Cleanup() {
 	delete pCamera;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow* window);
+void processInput(GLFWwindow* window) {	// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
 
-// timing
-double deltaTime = 0.0f;    // time between current frame and last frame
-double lastFrame = 0.0f;
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(FORWARD, (float)deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(BACKWARD, (float)deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(LEFT, (float)deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(RIGHT, (float)deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_PAGE_UP) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(UP, (float)deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_PAGE_DOWN) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(DOWN, (float)deltaTime);
 
-unsigned int CreateTexture(const std::string& strTexturePath);
+	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+		int width, height;
+		glfwGetWindowSize(window, &width, &height);
+		pCamera->Reset(width, height);
 
-// ** SKYBOX **
+	}
+}
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {	// glfw: whenever the window size changed (by OS or user resize) this callback function executes
+	// make sure the viewport matches the new window dimensions; note that width and 
+	// height will be significantly larger than specified on retina displays.
+	pCamera->Reshape(width, height);
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+	pCamera->MouseControl((float)xpos, (float)ypos);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yOffset) {
+	pCamera->ProcessMouseScroll((float)yOffset);
+}
+
+unsigned int CreateTexture(const std::string& strTexturePath) {
+	unsigned int textureId = -1;
+
+	// load image, create texture and generate mipmaps
+	int width, height, nrChannels;
+	//stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
+	unsigned char* data = stbi_load(strTexturePath.c_str(), &width, &height, &nrChannels, 0);
+	if (data) {
+		GLenum format;
+		if (nrChannels == 1)
+			format = GL_RED;
+		else if (nrChannels == 3)
+			format = GL_RGB;
+		else if (nrChannels == 4)
+			format = GL_RGBA;
+
+		glGenTextures(1, &textureId);
+		glBindTexture(GL_TEXTURE_2D, textureId);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		// set the texture wrapping parameters
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		// set texture filtering parameters
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	} else {
+		std::cout << "Failed to load texture: " << strTexturePath << std::endl;
+	}
+	stbi_image_free(data);
+
+	return textureId;
+}
+
+// *** SKYBOX ***
+/*
 // loads a cubemap texture from 6 individual texture faces
 // order:
 // +X (right)
 // -X (left)
 // +Y (top)
 // -Y (bottom)
-// +Z (front) 
+// +Z (front)
 // -Z (back)
-// -------------------------------------------------------
+*/
 unsigned int loadCubemap(std::vector<std::string> faces) {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
@@ -401,29 +157,16 @@ unsigned int loadCubemap(std::vector<std::string> faces) {
 
 	return textureID;
 }
-// ** SKYBOX **
-
-void RotateGrass(glm::mat4& model, Shader& shaderGrass) {
-
-	for (int i = 1; i < 5; i++) {
-
-		glm::vec3 Position(0, -5.f, 0);
-
-		model = glm::rotate(model, glm::radians(45.0f * i), Position);
-
-		shaderGrass.SetMat4("model", model);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-	}
-}
+// *** SKYBOX ***
 
 int main(int argc, char** argv) {
+
 	std::string strFullExeFileName = argv[0];
 	std::string strExePath;
 	const size_t last_slash_idx = strFullExeFileName.rfind('\\');
 	if (std::string::npos != last_slash_idx) {
 		strExePath = strFullExeFileName.substr(0, last_slash_idx);
 	}
-
 
 	// glfw: initialize and configure
 	glfwInit();
@@ -453,57 +196,6 @@ int main(int argc, char** argv) {
 	//glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	// Floor vertices
-	float floorVertices[] = {
-		// positions          // texture Coords 
-		5.0f,	-0.5f,	5.0f,	1.0f,	0.0f,
-		-5.0f,	-0.5f,	5.0f,	0.0f,	0.0f,
-		-5.0f,	-0.5f,	-5.0f,	0.0f,	1.0f,
-
-		5.0f, -0.5f,  5.0f,  1.0f, 0.0f,
-		-5.0f, -0.5f, -5.0f,  0.0f, 1.0f,
-		5.0f, -0.5f, -5.0f,  1.0f, 1.0f
-	};
-
-	// Grass vertices //mine
-	float grassVertices[] = {
-		// positions          // texture Coords 
-		-0.5f,	0.5f,	0.0f,	0.0f,	0.0f,
-		-0.5f,	-0.5f,	0.0f,	0.0f,	1.0f,
-		0.5f,	-0.5f,	0.0f,	1.0f,	1.0f,
-
-		-0.5f,	0.5f,	0.0f,	0.0f,	0.0f,
-		0.5f,	-0.5f,	0.0f,	1.0f,	1.0f,
-		0.5f,	0.5f,	0.0f,	1.0f,	0.0f
-	};
-
-
-
-	// Floor VAO si VBO
-	unsigned int floorVAO, floorVBO;
-	glGenVertexArrays(1, &floorVAO);
-	glGenBuffers(1, &floorVBO);
-	glBindVertexArray(floorVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, floorVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(floorVertices), &floorVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-
-	// Grass VAO si VBO
-	unsigned int grassVAO, grassVBO;
-	glGenVertexArrays(1, &grassVAO);
-	glGenBuffers(1, &grassVBO);
-	glBindVertexArray(grassVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, grassVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(grassVertices), &grassVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-
-	// Floor texture
 	// ** DEFINING TEXTURE PATH **
 	std::string pathToRootFolder = strFullExeFileName;
 	for (size_t i = 0; i < 3; i++) {
@@ -512,20 +204,21 @@ int main(int argc, char** argv) {
 	}
 	std::string pathToTextures = pathToRootFolder + "\\_external\\Textures\\";
 
+	// Floor texture
 	unsigned int floorTexture = CreateTexture(pathToTextures + "Sand.jpg");
 
 	// Grass texture
 	unsigned int grassTexture = CreateTexture(pathToTextures + "grass3.png");
+	std::string pathToSkyBoxShaders("Shaders\\Skybox\\");
 
-	// ** SKYBOX **
-
-// build and compile shaders
-// -------------------------
-	Shader shaderCubeMap("6.2.cubemaps.vs", "6.2.cubemaps.fs");
-	Shader shaderSkybox("6.2.skybox.vs", "6.2.skybox.fs");
+	// *** SKYBOX ***
+	// 
+	// build and compile shaders
+	//
+	Shader shaderCubeMap("Shaders\\Skybox\\cubemaps.vs", "Shaders\\Skybox\\cubemaps.fs");
+	Shader shaderSkybox("Shaders\\Skybox\\skybox.vs", "Shaders\\Skybox\\skybox.fs");
 
 	// set up vertex data (and buffer(s)) and configure vertex attributes
-	// ------------------------------------------------------------------
 	float cubeVertices[] = {
 		// positions          // normals
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -626,6 +319,7 @@ int main(int argc, char** argv) {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+
 	// skybox VAO
 	unsigned int skyboxVAO, skyboxVBO;
 	glGenVertexArrays(1, &skyboxVAO);
@@ -637,7 +331,6 @@ int main(int argc, char** argv) {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
 	// load textures
-	// -------------
 	std::string pathToSkybox = pathToTextures + "Skybox\\";
 	std::vector<std::string> faces
 	{
@@ -651,31 +344,30 @@ int main(int argc, char** argv) {
 	unsigned int cubemapTexture = loadCubemap(faces);
 
 	// shader configuration
-	// --------------------
-	//
-	
+
 	shaderCubeMap.Use();
 	shaderCubeMap.SetInt("skybox", 0);
 
 	shaderSkybox.Use();
 	shaderSkybox.SetInt("skybox", 0);
-	
-
-	// ** SKYBOX **
+	//
+	// *** SKYBOX ***
 
 	// Create camera
 	pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 0.0, 3.0));
 
-	Shader shaderFloor("Sand.vs", "Sand.fs");
-	//Shader shaderBlending("Blending.vs", "Blending.fs");
-	shaderFloor.SetInt("texture1", 0);
+	// *** MESH ***
+	/*
+	Vertex vertices[] = {
+		Vertex(glm::vec3(-0.5,-0.5,0)),
+		Vertex(glm::vec3(0,0.5,0)),
+		Vertex(glm::vec3(0.5,-0.5,0)),
+	};
 
-	Shader shaderGrass("Grass.vs", "Grass.fs");
-	shaderGrass.SetInt("texture1", 0);
-
-	//cubemap + skybox shaders
-	//shaderCubeMap.SetInt("texture1", 0);
-	//shaderSkybox.SetInt("texture1", 0);
+	Mesh mesh(vertices, sizeof(vertices) / sizeof(vertices[0]));
+	bennyShader bShader("./res/basicShader");
+	// *** MESH ***
+	*/
 
 	// render loop
 	while (!glfwWindowShouldClose(window)) {
@@ -689,48 +381,8 @@ int main(int argc, char** argv) {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glm::mat4 model = glm::mat4(1.0);
-
-		shaderFloor.Use();
 		glm::mat4 projection = pCamera->GetProjectionMatrix();
 		glm::mat4 view = pCamera->GetViewMatrix();
-		shaderFloor.SetMat4("projection", projection);
-		shaderFloor.SetMat4("view", view);
-
-		// Draw floor
-		glBindVertexArray(floorVAO);
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
-		model = glm::mat4();
-		shaderFloor.SetMat4("model", model);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-
-		//shaderBlending.Use();
-		//shaderBlending.SetMat4("projection", projection);
-		//shaderBlending.SetMat4("view", view);
-
-		shaderGrass.Use();
-		shaderGrass.SetMat4("projection", projection);
-		shaderGrass.SetMat4("view", view);
-
-		// Draw vegetation
-		glBindVertexArray(grassVAO);
-		glBindTexture(GL_TEXTURE_2D, grassTexture);
-		model = glm::mat4();
-		shaderGrass.SetMat4("model", model);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-
-		for (int j = 1; j < 10; j++) {
-			for (int i = 1; i < 10; i++) {
-				model = glm::mat4();
-				glm::vec3 Position(-5.f + i, 0, -5.f + j);
-				model = glm::translate(model, Position);
-
-				shaderGrass.SetMat4("model", model);
-				glDrawArrays(GL_TRIANGLES, 0, 6);
-
-				RotateGrass(model, shaderGrass);
-			}
-		}
 
 		// cubes
 		glBindVertexArray(cubeMapVAO);
@@ -745,7 +397,7 @@ int main(int argc, char** argv) {
 		view = glm::mat4(glm::mat3(pCamera->GetViewMatrix())); // remove translation from the view matrix
 		shaderSkybox.SetMat4("view", view);
 		shaderSkybox.SetMat4("projection", projection);
-		
+
 		// skybox cube
 		glBindVertexArray(skyboxVAO);
 		glActiveTexture(GL_TEXTURE0);
@@ -761,89 +413,7 @@ int main(int argc, char** argv) {
 
 	Cleanup();
 
-	// Clear floor VAO
-
-	// Clear grass VAO
-
 	// glfw: terminate, clearing all previously allocated GLFW resources
 	glfwTerminate();
 	return 0;
-}
-
-
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-void processInput(GLFWwindow* window) {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-
-	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(FORWARD, (float)deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(BACKWARD, (float)deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(LEFT, (float)deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(RIGHT, (float)deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_PAGE_UP) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(UP, (float)deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_PAGE_DOWN) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(DOWN, (float)deltaTime);
-
-	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-		int width, height;
-		glfwGetWindowSize(window, &width, &height);
-		pCamera->Reset(width, height);
-
-	}
-}
-
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-	// make sure the viewport matches the new window dimensions; note that width and 
-	// height will be significantly larger than specified on retina displays.
-	pCamera->Reshape(width, height);
-}
-
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-	pCamera->MouseControl((float)xpos, (float)ypos);
-}
-
-void scroll_callback(GLFWwindow* window, double xoffset, double yOffset) {
-	pCamera->ProcessMouseScroll((float)yOffset);
-}
-
-unsigned int CreateTexture(const std::string& strTexturePath) {
-	unsigned int textureId = -1;
-
-	// load image, create texture and generate mipmaps
-	int width, height, nrChannels;
-	//stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-	unsigned char* data = stbi_load(strTexturePath.c_str(), &width, &height, &nrChannels, 0);
-	if (data) {
-		GLenum format;
-		if (nrChannels == 1)
-			format = GL_RED;
-		else if (nrChannels == 3)
-			format = GL_RGB;
-		else if (nrChannels == 4)
-			format = GL_RGBA;
-
-		glGenTextures(1, &textureId);
-		glBindTexture(GL_TEXTURE_2D, textureId);
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		// set the texture wrapping parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		// set texture filtering parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	} else {
-		std::cout << "Failed to load texture: " << strTexturePath << std::endl;
-	}
-	stbi_image_free(data);
-
-	return textureId;
 }

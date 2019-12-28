@@ -18,31 +18,19 @@
     <ClCompile Include="YellowSubmarine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Utility\Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Utility\Shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Sand.fs">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="Sand.vs">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="Grass.fs">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="Grass.vs">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="6.2.cubemaps.fs">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="6.2.cubemaps.vs">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="6.2.skybox.fs">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="6.2.skybox.vs">
-      <Filter>Source Files</Filter>
-    </None>
+    <ClInclude Include="Utility\Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility\Shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

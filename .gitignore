@@ -18,3 +18,9 @@ YellowSubmarine/YellowSubmarine/[Dd]ebug/
 YellowSubmarine/[Dd]ebug/YellowSubmarine.exe
 YellowSubmarine/[Dd]ebug/YellowSubmarine.ilk
 YellowSubmarine/[Dd]ebug/YellowSubmarine.pdb
+
+YellowSubmarine/.vs/YellowSubmarine/v16
+YellowSubmarine/YellowSubmarine/x64/Debug
+
+Resources/Test
+Resources/_external
