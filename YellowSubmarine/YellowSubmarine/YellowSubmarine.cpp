@@ -1,11 +1,12 @@
 ﻿// YellowSubmarine.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
+#include <iostream>
 #include <stdlib.h> // necesare pentru citirea shaderStencilTesting-elor
 
 #include <GL/glew.h>
 
-#define GLM_FORCE_CTOR_INIT 
+#define GLM_FORCE_CTOR_INIT
 #include <GLM.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
@@ -15,13 +16,13 @@
 #include "Utility/Camera.h"
 #include "Utility/Model.h"
 #include "Utility/Shader.h"
-#include "Skybox.h"
+#include "Utility/Input.h"
+#include "Utility/Paths.h"
 
-#include <iostream>
+#include "Skybox.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#include "Utility/Input.h"
 
 #pragma comment (lib, "glfw3dll.lib")
 #pragma comment (lib, "glew32.lib")
@@ -30,7 +31,38 @@
 
 using namespace std;
 
-//Camera pCamera(glm::vec3(0.0f, 0.0f, 3.0f));
+bool DrawSkybox(Shader shaderSkybox, glm::mat4& view, glm::mat4& projection) {
+	// ** SKYBOX **
+	// 
+	// cubes
+	glBindVertexArray(cubeMapVAO);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+
+	// draw skybox as last
+
+	glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+	shaderSkybox.Use();
+
+	//view = glm::mat4(glm::mat3(pCamera.GetViewMatrix())); // remove translation from the view matrix
+	view = glm::mat4(glm::mat3(pCamera->GetViewMatrix())); // remove translation from the view matrix
+
+	shaderSkybox.SetMat4("view", view);
+	shaderSkybox.SetMat4("projection", projection);
+
+	// skybox cube
+	glBindVertexArray(skyboxVAO);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+	glDepthFunc(GL_LESS); // set depth function back to default
+	//
+	// ** SKYBOX **
+	return true;
+}
 
 bool DrawObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat4& projection) {
 	// ** MODEL **
@@ -57,9 +89,93 @@ bool DrawObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat
 	return true;
 }
 
-int main(int argc, char** argv) {
+bool BuildDepthMapVBO(unsigned int & depthMap, unsigned int & depthMapFBO) {
 
-	std::string strFullExeFileName = argv[0];
+	// configure depth map FBO
+	glGenFramebuffers(1, &depthMapFBO);
+	// create depth texture
+
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+	// attach depth texture as FBO's depth buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	return true;
+}
+
+bool RenderSceneWithLight(Shader shadowMappingDepthShader, Shader shadowMappingShader, unsigned int depthMap, unsigned int depthMapFBO, glm::vec3 lightPos, glm::mat4& view, glm::mat4& projection) {
+	// render
+	// ------
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// 1. render depth of scene to texture (from light's perspective)
+	glm::mat4 lightProjection, lightView;
+	glm::mat4 lightSpaceMatrix;
+	float near_plane = 1.0f, far_plane = 7.5f;
+	lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+	lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+	lightSpaceMatrix = lightProjection * lightView;
+
+	// render scene from light's point of view
+	shadowMappingDepthShader.Use();
+	shadowMappingDepthShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, floorTexture);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
+	//renderScene(shadowMappingDepthShader);
+	glCullFace(GL_BACK);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// reset viewport
+	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// 2. render scene as normal using the generated depth/shadow map 
+	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	shadowMappingShader.Use();
+	//glm::mat4 projection = pCamera->GetProjectionMatrix();
+
+	//glm::mat4 view = pCamera.GetViewMatrix();
+
+	shadowMappingShader.SetMat4("projection", projection);
+	shadowMappingShader.SetMat4("view", view);
+	// set light uniforms
+
+	//shadowMappingShader.SetVec3("viewPos", pCamera.GetPosition());
+	shadowMappingShader.SetVec3("viewPos", pCamera->GetPosition());
+
+	shadowMappingShader.SetVec3("lightPos", lightPos);
+	shadowMappingShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, floorTexture);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	glDisable(GL_CULL_FACE);
+
+	return true;
+}
+
+int main(int argc, char** argv) {
 
 	// glfw: initialize and configure
 	glfwInit();
@@ -81,48 +197,16 @@ int main(int argc, char** argv) {
 	glfwSetScrollCallback(window, scroll_callback);
 
 	// tell GLFW to capture our mouse
-	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	glewInit();
 
-	// Create camera
-	//pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 1.0, 3.0));
-
 	// configure global opengl state
-	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
 
-	std::string pathToRootFolder = strFullExeFileName;
-	for (size_t i = 0; i < 3; i++) {
-		size_t last_slash_index = pathToRootFolder.rfind('\\');
-		pathToRootFolder = pathToRootFolder.substr(0, last_slash_index);
-	}
-
-	std::string pathToExe = strFullExeFileName;
-	for (size_t i = 0; i < 2; i++) {
-		size_t last_slash_index = pathToExe.rfind('\\');
-		pathToExe = pathToExe.substr(0, last_slash_index);
-	}
-	pathToExe = pathToExe + "\\YellowSubmarine";
-
-	std::string pathToExternalTextures = pathToRootFolder + "\\_external\\Textures\\";
-
-	std::string pathToTextures = pathToExe + "\\Textures\\";
-	std::string pathToShaders = pathToExe + "\\Shaders\\";
-	std::string pathToObjects = pathToExe + "\\Objects\\";
-
-	std::string pathToNanosuit = pathToExe + "\\Objects\\Nanosuit\\";
-	std::string pathToSubmarine = pathToExe + "\\Objects\\Submarine\\";
-
-	// Floor texture
-	//unsigned int floorTexture = CreateTexture(pathToExternalTextures + "Sand.jpg");
-
-	std::string pathToSkyBoxTextures(pathToTextures + "Skybox\\");
-	std::string pathToSkyBoxShaders(pathToShaders + "Skybox\\");
-	std::string pathToShadowMappingShaders(pathToShaders + "Shadow\\");
-
-	// build and compile shaders
-	// -------------------------
+	// Build and compile shaders
+	std::string strFullExeFileName = argv[0];
+	InitializePaths(strFullExeFileName);
 
 	Shader shadowMappingShader(pathToShadowMappingShaders + "ShadowMapping.vs", pathToShadowMappingShaders + "ShadowMapping.fs");
 	Shader shadowMappingDepthShader(pathToShadowMappingShaders + "ShadowMappingDepth.vs", pathToShadowMappingShaders + "ShadowMappingDepth.fs");
@@ -140,30 +224,9 @@ int main(int argc, char** argv) {
 	const char* submarine = pathSub.c_str();
 	Model submarineModel((GLchar*)submarine);
 
-	// configure depth map FBO
-	// -----------------------
-	const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
-	unsigned int depthMapFBO;
-	glGenFramebuffers(1, &depthMapFBO);
-	// create depth texture
 	unsigned int depthMap;
-	glGenTextures(1, &depthMap);
-	glBindTexture(GL_TEXTURE_2D, depthMap);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-	// attach depth texture as FBO's depth buffer
-	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
+	unsigned int depthMapFBO;
+	BuildDepthMapVBO(depthMap, depthMapFBO);
 
 	// shader configuration
 	// --------------------
@@ -180,16 +243,12 @@ int main(int argc, char** argv) {
 	glm::mat4 projection = glm::perspective(pCamera->GetZoom(), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
 	// ** SKYBOX **
-	// build and compile shaders
 	Shader shaderCubeMap(pathToSkyBoxShaders + "cubemaps.vs", pathToSkyBoxShaders + "cubemaps.fs");
 	Shader shaderSkybox(pathToSkyBoxShaders + "skybox.vs", pathToSkyBoxShaders + "skybox.fs");
-
 	buildSkybox(shaderCubeMap, shaderSkybox, pathToTextures);
-	//
 	// ** SKYBOX **
 
-	// render loop
-	// -----------
+	// ** RENDER LOOP **
 	while (!glfwWindowShouldClose(window)) {
 		// per-frame time logic
 		// --------------------
@@ -205,123 +264,23 @@ int main(int argc, char** argv) {
 		// -----
 		processInput(window);
 
-		// render
-		// ------
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// 1. render depth of scene to texture (from light's perspective)
-		glm::mat4 lightProjection, lightView;
-		glm::mat4 lightSpaceMatrix;
-		float near_plane = 1.0f, far_plane = 7.5f;
-		lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-		lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
-		lightSpaceMatrix = lightProjection * lightView;
-
-		// render scene from light's point of view
-		shadowMappingDepthShader.Use();
-		shadowMappingDepthShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
-
-		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-		glClear(GL_DEPTH_BUFFER_BIT);
-		//glActiveTexture(GL_TEXTURE0);
-		//glBindTexture(GL_TEXTURE_2D, floorTexture);
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_FRONT);
-		//renderScene(shadowMappingDepthShader);
-		glCullFace(GL_BACK);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-		// reset viewport
-		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// 2. render scene as normal using the generated depth/shadow map 
-		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		shadowMappingShader.Use();
-		//glm::mat4 projection = pCamera->GetProjectionMatrix();
-
-		//glm::mat4 view = pCamera.GetViewMatrix();
 		glm::mat4 view = pCamera->GetViewMatrix();
+		RenderSceneWithLight(shadowMappingDepthShader, shadowMappingShader, depthMap, depthMapFBO, lightPos, view, projection);
 
-		shadowMappingShader.SetMat4("projection", projection);
-		shadowMappingShader.SetMat4("view", view);
-		// set light uniforms
-
-		//shadowMappingShader.SetVec3("viewPos", pCamera.GetPosition());
-		shadowMappingShader.SetVec3("viewPos", pCamera->GetPosition());
-
-		shadowMappingShader.SetVec3("lightPos", lightPos);
-		shadowMappingShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
-
-		//glActiveTexture(GL_TEXTURE0);
-		//glBindTexture(GL_TEXTURE_2D, floorTexture);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, depthMap);
-		glDisable(GL_CULL_FACE);
 		//renderScene(shadowMappingShader);
 
-		// ** SKYBOX **
-		// 
-		// cubes
-		glBindVertexArray(cubeMapVAO);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
-
-		// draw skybox as last
-
-		glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
-		shaderSkybox.Use();
-
-		//view = glm::mat4(glm::mat3(pCamera.GetViewMatrix())); // remove translation from the view matrix
-		view = glm::mat4(glm::mat3(pCamera->GetViewMatrix())); // remove translation from the view matrix
-
-		shaderSkybox.SetMat4("view", view);
-		shaderSkybox.SetMat4("projection", projection);
-
-		// skybox cube
-		glBindVertexArray(skyboxVAO);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
-		glDepthFunc(GL_LESS); // set depth function back to default
-		//
-		// ** SKYBOX **
+		DrawSkybox(shaderSkybox, view, projection);
 
 		// ** MODEL **
-		//
-		shaderModel.Use();
-
-		//view = pCamera.GetViewMatrix();
-		view = pCamera->GetViewMatrix();
-
-		shaderModel.SetMat4("view", view);
-		shaderModel.SetMat4("projection", projection);
-		//glUniformMatrix4fv(glGetUniformLocation(shader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-		//glUniformMatrix4fv(glGetUniformLocation(shader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-
-		// Draw the loaded model
-		glm::mat4 model;
-		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // Translate it down a bit so it's at the center of the scene
-		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// It's a bit too big for our scene, so scale it down
-		shaderModel.SetMat4("model", model);
-		//glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-		submarineModel.Draw(shaderModel);
-		//
-		// ** MODEL **
-
+		DrawObject(shaderModel, submarineModel, view, projection);
 		DrawObject(shaderModel, nanoModel, view, projection);
+		// ** MODEL **
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
+	// ** RENDER LOOP **
 
 	/*
 	Shader ourShader("1.model_loading.vs", "1.model_loading.fs");

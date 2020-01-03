@@ -3,6 +3,10 @@
 #include <vec3.hpp>
 #include <mat4x4.hpp>
 
+#include <GL/glew.h>
+
+const GLfloat ZOOM = 45.0f;
+
 enum ECameraMovementType
 {
 	UNKNOWN,
@@ -16,19 +20,19 @@ enum ECameraMovementType
 
 class Camera
 {
-	
+
 private:
-	
+
 	// Default camera values
 	const float zNEAR = 0.1f;
-	const float zFAR = 100.f;
+	const float zFAR = 1000.f;
 	const float YAW = -90.0f;
 	const float PITCH = 0.0f;
 	const float FOV = 45.0f;
 	glm::vec3 startPosition;
 
 public:
-	
+
 	Camera(const int width, const int height, const glm::vec3& position);
 
 	void Set(const int width, const int height, const glm::vec3& position);
@@ -39,19 +43,22 @@ public:
 	const glm::mat4 GetViewMatrix() const;
 	const glm::vec3 GetPosition() const;
 	const glm::mat4 GetProjectionMatrix() const;
-	
+
 	void ProcessKeyboard(ECameraMovementType direction, float deltaTime);
 	void MouseControl(float xPos, float yPos);
 	void ProcessMouseScroll(float yOffset);
 
+	GLfloat GetZoom();
+
 private:
-	
+
 	void ProcessMouseMovement(float xOffset, float yOffset, bool constrainPitch = true);
 	void UpdateCameraVectors();
 
 protected:
-	
+
 	const float cameraSpeedFactor = 2.5f;
+	//const float cameraSpeedFactor = 100.f;
 	const float mouseSensitivity = 0.1f;
 
 	// Perspective properties
@@ -68,12 +75,14 @@ protected:
 	glm::vec3 up;
 	glm::vec3 worldUp;
 
+	GLfloat m_zoom;
+
 	// Euler Angles
 	float yaw;
 	float pitch;
 
 	bool bFirstMouseMove = true;
 	float lastX = 0.f, lastY = 0.f;
-	
+
 };
 

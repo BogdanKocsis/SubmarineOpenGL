@@ -7,6 +7,8 @@
 // settings
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
+const unsigned int SHADOW_WIDTH = 4096;
+const unsigned int SHADOW_HEIGHT = 4096;
 
 // timing
 double deltaTime = 0.0f;    // time between current frame and last frame
@@ -52,6 +54,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yOffset) {
 	pCamera->ProcessMouseScroll((float)yOffset);
 }
 
+// might not be necessary
 bool RotateLight = false;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key == GLFW_KEY_L && action == GLFW_PRESS) {

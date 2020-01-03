@@ -13,8 +13,7 @@ unsigned int cubeMapVAO, cubeMapVBO;
 unsigned int skyboxVAO, skyboxVBO;
 unsigned int cubemapTexture;
 
-unsigned int loadCubemap(std::vector<std::string> faces)
-{
+unsigned int loadCubemap(std::vector<std::string> faces) {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
@@ -39,8 +38,7 @@ unsigned int loadCubemap(std::vector<std::string> faces)
 	return textureID;
 }
 
-bool buildSkybox(Shader shaderCubeMap, Shader shaderSkybox, std::string pathToTextures)
-{
+bool buildSkybox(Shader shaderCubeMap, Shader shaderSkybox, std::string pathToTextures) {
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
 	float cubeVertices[] = {
@@ -176,15 +174,3 @@ bool buildSkybox(Shader shaderCubeMap, Shader shaderSkybox, std::string pathToTe
 
 	return true;
 }
-
-/*
- 	std::vector<std::string> facesMisty
-	{
-		pathToSkybox + "Misty\\misty_rt.tga",
-		pathToSkybox + "Misty\\misty_lf.tga",
-		pathToSkybox + "Misty\\misty_up.tga",
-		pathToSkybox + "Misty\\misty_dn.tga",
-		pathToSkybox + "Misty\\misty_ft.tga",
-		pathToSkybox + "Misty\\misty_bk.tga",
-	};
- */
