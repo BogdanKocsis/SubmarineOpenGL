@@ -13,10 +13,13 @@ std::string pathToObjects;
 
 std::string pathToNanosuit;
 std::string pathToSubmarine;
+std::string pathToTerrain;
+std::string pathToWater;
 
 std::string pathToSkyBoxTextures;
 std::string pathToSkyBoxShaders;
 std::string pathToShadowMappingShaders;
+std::string pathToWaterShaders;
 
 bool InitializePaths(std::string strFullExeFileName) {	//Initializes all the paths to the directories of the project
 
@@ -41,10 +44,13 @@ bool InitializePaths(std::string strFullExeFileName) {	//Initializes all the pat
 
 	pathToNanosuit = pathToExe + "\\Objects\\Nanosuit\\";
 	pathToSubmarine = pathToExe + "\\Objects\\Submarine\\";
+	pathToTerrain = pathToExe + "\\Objects\\Terrain\\";
+	pathToWater = pathToExe + "\\Objects\\Water\\";
 
 	pathToSkyBoxTextures = pathToTextures + "Skybox\\";
 	pathToSkyBoxShaders = pathToShaders + "Skybox\\";
 	pathToShadowMappingShaders = pathToShaders + "Shadow\\";
+	pathToWaterShaders = pathToShaders + "Water\\";
 
 	return true;
 }

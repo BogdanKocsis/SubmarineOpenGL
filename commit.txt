@@ -1,3 +1,3 @@
-Fixed bug where Program was not found as part of a Shader object.
-Added DrawSkybox() method.
-Paths.h contains global paths to all the necessary directories of the project.
+Added terrain object and scaleFactor to DrawObject() method.
+Added water object. Known bug: water shows up reddish.
+More refactoring.

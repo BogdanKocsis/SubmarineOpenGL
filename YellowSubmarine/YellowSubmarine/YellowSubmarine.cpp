@@ -33,7 +33,7 @@ using namespace std;
 
 bool DrawSkybox(Shader shaderSkybox, glm::mat4& view, glm::mat4& projection) {
 	// ** SKYBOX **
-	// 
+
 	// cubes
 	glBindVertexArray(cubeMapVAO);
 	glActiveTexture(GL_TEXTURE0);
@@ -42,11 +42,9 @@ bool DrawSkybox(Shader shaderSkybox, glm::mat4& view, glm::mat4& projection) {
 	glBindVertexArray(0);
 
 	// draw skybox as last
-
 	glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
 	shaderSkybox.Use();
 
-	//view = glm::mat4(glm::mat3(pCamera.GetViewMatrix())); // remove translation from the view matrix
 	view = glm::mat4(glm::mat3(pCamera->GetViewMatrix())); // remove translation from the view matrix
 
 	shaderSkybox.SetMat4("view", view);
@@ -59,37 +57,32 @@ bool DrawSkybox(Shader shaderSkybox, glm::mat4& view, glm::mat4& projection) {
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 	glBindVertexArray(0);
 	glDepthFunc(GL_LESS); // set depth function back to default
-	//
 	// ** SKYBOX **
+ 
 	return true;
 }
 
-bool DrawObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat4& projection) {
+bool DrawObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat4& projection, float scaleFactor) {
 	// ** MODEL **
-	//
 	shaderModel.Use();
 
-	//view = pCamera.GetViewMatrix();
 	view = pCamera->GetViewMatrix();
 
 	shaderModel.SetMat4("view", view);
 	shaderModel.SetMat4("projection", projection);
-	//glUniformMatrix4fv(glGetUniformLocation(shader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-	//glUniformMatrix4fv(glGetUniformLocation(shader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
 	// Draw the loaded model
 	glm::mat4 model;
-	model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // Translate it down a bit so it's at the center of the scene
-	model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// It's a bit too big for our scene, so scale it down
+	model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // Move to scene centre
+	model = glm::scale(model, glm::vec3(scaleFactor, scaleFactor, scaleFactor));	// Scale model
 	shaderModel.SetMat4("model", model);
-	//glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
 	objectModel.Draw(shaderModel);
-	//
 	// ** MODEL **
+
 	return true;
 }
 
-bool BuildDepthMapVBO(unsigned int & depthMap, unsigned int & depthMapFBO) {
+bool BuildDepthMapVBO(unsigned int& depthMap, unsigned int& depthMapFBO) {
 
 	// configure depth map FBO
 	glGenFramebuffers(1, &depthMapFBO);
@@ -117,7 +110,6 @@ bool BuildDepthMapVBO(unsigned int & depthMap, unsigned int & depthMapFBO) {
 
 bool RenderSceneWithLight(Shader shadowMappingDepthShader, Shader shadowMappingShader, unsigned int depthMap, unsigned int depthMapFBO, glm::vec3 lightPos, glm::mat4& view, glm::mat4& projection) {
 	// render
-	// ------
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -136,11 +128,8 @@ bool RenderSceneWithLight(Shader shadowMappingDepthShader, Shader shadowMappingS
 	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 	glClear(GL_DEPTH_BUFFER_BIT);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, floorTexture);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
-	//renderScene(shadowMappingDepthShader);
 	glCullFace(GL_BACK);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -152,22 +141,15 @@ bool RenderSceneWithLight(Shader shadowMappingDepthShader, Shader shadowMappingS
 	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	shadowMappingShader.Use();
-	//glm::mat4 projection = pCamera->GetProjectionMatrix();
 
-	//glm::mat4 view = pCamera.GetViewMatrix();
-
+	// set light uniforms
 	shadowMappingShader.SetMat4("projection", projection);
 	shadowMappingShader.SetMat4("view", view);
-	// set light uniforms
-
-	//shadowMappingShader.SetVec3("viewPos", pCamera.GetPosition());
 	shadowMappingShader.SetVec3("viewPos", pCamera->GetPosition());
 
 	shadowMappingShader.SetVec3("lightPos", lightPos);
 	shadowMappingShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
 
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, floorTexture);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, depthMap);
 	glDisable(GL_CULL_FACE);
@@ -175,8 +157,7 @@ bool RenderSceneWithLight(Shader shadowMappingDepthShader, Shader shadowMappingS
 	return true;
 }
 
-int main(int argc, char** argv) {
-
+bool InitializeWindow(GLFWwindow*& window) {
 	// glfw: initialize and configure
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -184,11 +165,11 @@ int main(int argc, char** argv) {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// glfw window creation
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Yellow Submarine", NULL, NULL);
+	window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Yellow Submarine", NULL, NULL);
 	if (window == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
-		return -1;
+		return false;
 	}
 
 	glfwMakeContextCurrent(window);
@@ -204,6 +185,14 @@ int main(int argc, char** argv) {
 	// configure global opengl state
 	glEnable(GL_DEPTH_TEST);
 
+	return true;
+}
+
+int main(int argc, char** argv) {
+
+	GLFWwindow* window;
+	InitializeWindow(window);
+
 	// Build and compile shaders
 	std::string strFullExeFileName = argv[0];
 	InitializePaths(strFullExeFileName);
@@ -217,6 +206,8 @@ int main(int argc, char** argv) {
 	// Load models
 	std::string pathNano = pathToNanosuit + "nanosuit.obj";
 	std::string pathSub = pathToSubmarine + "YellowSubmarine.obj";
+	std::string pathTerrain = pathToTerrain + "terrain.obj";
+	std::string pathWater = pathToWater + "water.obj";
 
 	const char* nanosuit = pathNano.c_str();
 	Model nanoModel((GLchar*)nanosuit);
@@ -224,18 +215,19 @@ int main(int argc, char** argv) {
 	const char* submarine = pathSub.c_str();
 	Model submarineModel((GLchar*)submarine);
 
+	const char* terrain = pathTerrain.c_str();
+	Model terrainModel((GLchar*)terrain);
+
 	unsigned int depthMap;
 	unsigned int depthMapFBO;
 	BuildDepthMapVBO(depthMap, depthMapFBO);
 
 	// shader configuration
-	// --------------------
 	shadowMappingShader.Use();
 	shadowMappingShader.SetInt("diffuseTexture", 0);
 	shadowMappingShader.SetInt("shadowMap", 1);
 
 	// lighting info
-	// -------------
 	glm::vec3 lightPos(-2.0f, 4.0f, -1.0f);
 
 	glEnable(GL_CULL_FACE);
@@ -248,10 +240,16 @@ int main(int argc, char** argv) {
 	buildSkybox(shaderCubeMap, shaderSkybox, pathToTextures);
 	// ** SKYBOX **
 
+	// ** WATER **
+	Shader shaderWater(pathToWaterShaders + "water.vs", pathToWaterShaders + "water.fs");
+	
+	// ** WATER **
+	const char* water = pathWater.c_str();
+	Model waterModel((GLchar*)water);
 	// ** RENDER LOOP **
 	while (!glfwWindowShouldClose(window)) {
+
 		// per-frame time logic
-		// --------------------
 		double currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -260,8 +258,8 @@ int main(int argc, char** argv) {
 			lightPos.x = sin(currentFrame);
 			lightPos.z = cos(currentFrame);
 		}
+
 		// input
-		// -----
 		processInput(window);
 
 		glm::mat4 view = pCamera->GetViewMatrix();
@@ -272,8 +270,9 @@ int main(int argc, char** argv) {
 		DrawSkybox(shaderSkybox, view, projection);
 
 		// ** MODEL **
-		DrawObject(shaderModel, submarineModel, view, projection);
-		DrawObject(shaderModel, nanoModel, view, projection);
+		DrawObject(shaderModel, submarineModel, view, projection, 0.5f);
+		DrawObject(shaderModel, terrainModel, view, projection, 0.2f);
+		DrawObject(shaderModel, waterModel, view, projection, 0.2f);
 		// ** MODEL **
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
