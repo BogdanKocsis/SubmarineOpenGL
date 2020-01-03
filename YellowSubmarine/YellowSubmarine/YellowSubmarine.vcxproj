@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{F52A62A4-C431-4765-8127-9B1B03030A6F}</ProjectGuid>
+    <ProjectGuid>{C7494A01-C825-4DD8-A686-3A739F395441}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>YellowSubmarine</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
@@ -89,15 +89,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>..\..\_external\freeglut\freeglut\include;..\..\_external\glew\glew-2.1.0\include;..\..\_external\glfw\glfw-3.2.1.bin.WIN32\include\GLFW;..\..\_external\glm\glm\glm;..\..\_external\stb\stb-master;..\..\_external\common\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\..\_external\freeglut\freeglut\lib;..\..\_external\glew\glew-2.1.0\lib\Release\Win32;..\..\_external\glfw\glfw-3.2.1.bin.WIN32\lib-vc2015;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -109,10 +106,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)_external\assimp\include;$(SolutionDir)_external\glew-2.1.0\include;$(SolutionDir)_external\glfw-3.2.1.bin.WIN64\include\GLFW;$(SolutionDir)_external\glm\glm;$(SolutionDir)_external\stb-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)_external\assimp\lib;$(SolutionDir)_external\glew-2.1.0\lib\Release\x64;$(SolutionDir)_external\glfw-3.2.1.bin.WIN64\lib-vc2015;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -154,13 +154,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Utility\Camera.cpp" />
-    <ClCompile Include="Utility\Shader.cpp" />
     <ClCompile Include="YellowSubmarine.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Utility\Camera.h" />
-    <ClInclude Include="Utility\Shader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,0 +1,2 @@
+-added x64 libraries
+-loaded model and skybox in the scene
