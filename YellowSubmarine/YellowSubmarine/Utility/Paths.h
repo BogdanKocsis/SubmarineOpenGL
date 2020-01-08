@@ -13,6 +13,8 @@ std::string pathToObjects;
 
 std::string pathToNanosuit;
 std::string pathToSubmarine;
+std::string pathToDetachedSubmarine;
+
 std::string pathToTerrain;
 std::string pathToWater;
 
@@ -44,6 +46,8 @@ bool InitializePaths(std::string strFullExeFileName) {	//Initializes all the pat
 
 	pathToNanosuit = pathToExe + "\\Objects\\Nanosuit\\";
 	pathToSubmarine = pathToExe + "\\Objects\\Submarine\\";
+	pathToDetachedSubmarine = pathToExe + "\\Objects\\SubmarinePropellor\\";
+	
 	pathToTerrain = pathToExe + "\\Objects\\Terrain\\";
 	pathToWater = pathToExe + "\\Objects\\Water\\";
 

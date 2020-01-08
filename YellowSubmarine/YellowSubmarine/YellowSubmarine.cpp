@@ -23,13 +23,12 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#include <chrono>
 
 #pragma comment (lib, "glfw3dll.lib")
 #pragma comment (lib, "glew32.lib")
 #pragma comment (lib, "OpenGL32.lib")
 #pragma comment (lib, "assimp-vc140-mt.lib")
-
-using namespace std;
 
 bool DrawSkybox(Shader shaderSkybox, glm::mat4& view, glm::mat4& projection) {
 	// ** SKYBOX **
@@ -58,7 +57,7 @@ bool DrawSkybox(Shader shaderSkybox, glm::mat4& view, glm::mat4& projection) {
 	glBindVertexArray(0);
 	glDepthFunc(GL_LESS); // set depth function back to default
 	// ** SKYBOX **
- 
+
 	return true;
 }
 
@@ -81,6 +80,34 @@ bool DrawObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat
 
 	return true;
 }
+
+bool DrawAndRotateObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat4& projection, float scaleFactor, float time, float speedFactor) {
+	// ** MODEL **
+	shaderModel.Use();
+
+	view = pCamera->GetViewMatrix();
+
+	shaderModel.SetMat4("view", view);
+	shaderModel.SetMat4("projection", projection);
+
+	// Draw the loaded model
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // Move to scene centre
+	model = glm::scale(model, glm::vec3(scaleFactor, scaleFactor, scaleFactor));	// Scale model
+
+	model = glm::rotate(
+		model,
+		time * glm::radians(180.0f) * speedFactor,
+		glm::vec3(0.0f, 0.0f, 1.0f)
+	);
+
+	shaderModel.SetMat4("model", model);
+	objectModel.Draw(shaderModel);
+	// ** MODEL **
+
+	return true;
+}
+
 
 bool BuildDepthMapVBO(unsigned int& depthMap, unsigned int& depthMapFBO) {
 
@@ -190,6 +217,8 @@ bool InitializeWindow(GLFWwindow*& window) {
 
 int main(int argc, char** argv) {
 
+	auto t_start = std::chrono::high_resolution_clock::now();
+
 	GLFWwindow* window;
 	InitializeWindow(window);
 
@@ -205,7 +234,8 @@ int main(int argc, char** argv) {
 
 	// Load models
 	std::string pathNano = pathToNanosuit + "nanosuit.obj";
-	std::string pathSub = pathToSubmarine + "YellowSubmarine.obj";
+	std::string pathSub = pathToDetachedSubmarine + "sub_obj.obj";
+	std::string pathProp = pathToDetachedSubmarine + "prop_obj.obj";
 	std::string pathTerrain = pathToTerrain + "terrain.obj";
 	std::string pathWater = pathToWater + "water.obj";
 
@@ -214,6 +244,9 @@ int main(int argc, char** argv) {
 
 	const char* submarine = pathSub.c_str();
 	Model submarineModel((GLchar*)submarine);
+
+	const char* propeller = pathProp.c_str();
+	Model propellerModel((GLchar*)propeller);
 
 	const char* terrain = pathTerrain.c_str();
 	Model terrainModel((GLchar*)terrain);
@@ -240,12 +273,15 @@ int main(int argc, char** argv) {
 	buildSkybox(shaderCubeMap, shaderSkybox, pathToTextures);
 	// ** SKYBOX **
 
+	/*
 	// ** WATER **
 	Shader shaderWater(pathToWaterShaders + "water.vs", pathToWaterShaders + "water.fs");
-	
+
 	// ** WATER **
 	const char* water = pathWater.c_str();
 	Model waterModel((GLchar*)water);
+	*/
+
 	// ** RENDER LOOP **
 	while (!glfwWindowShouldClose(window)) {
 
@@ -269,10 +305,23 @@ int main(int argc, char** argv) {
 
 		DrawSkybox(shaderSkybox, view, projection);
 
+		// ** WATER **
+
+		// ** WATER **
+
 		// ** MODEL **
 		DrawObject(shaderModel, submarineModel, view, projection, 0.5f);
+		//DrawObject(shaderModel, propellerModel, view, projection, 0.5f);
+
+		auto t_now = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
+		
+		DrawAndRotateObject(shaderModel, propellerModel, view, projection, 0.5f, time, 2.0);
+
+		//RotateObject(propellerModel, projection);
+
 		DrawObject(shaderModel, terrainModel, view, projection, 0.2f);
-		DrawObject(shaderModel, waterModel, view, projection, 0.2f);
+		//DrawObject(shaderModel, waterModel, view, projection, 0.2f);
 		// ** MODEL **
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)

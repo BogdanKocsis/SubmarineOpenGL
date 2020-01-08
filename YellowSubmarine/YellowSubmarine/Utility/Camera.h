@@ -15,7 +15,9 @@ enum ECameraMovementType
 	LEFT,
 	RIGHT,
 	UP,
-	DOWN
+	DOWN,
+	SHIFT,
+	SPACE
 };
 
 class Camera
@@ -29,9 +31,10 @@ private:
 	const float YAW = -90.0f;
 	const float PITCH = 0.0f;
 	const float FOV = 45.0f;
-	glm::vec3 startPosition;
 
 public:
+
+	glm::vec3 startPosition;
 
 	Camera(const int width, const int height, const glm::vec3& position);
 
@@ -49,10 +52,10 @@ public:
 	void ProcessMouseScroll(float yOffset);
 
 	GLfloat GetZoom();
+	void ProcessMouseMovement(float xOffset, float yOffset, bool constrainPitch = true);
 
 private:
 
-	void ProcessMouseMovement(float xOffset, float yOffset, bool constrainPitch = true);
 	void UpdateCameraVectors();
 
 protected:
@@ -85,4 +88,3 @@ protected:
 	float lastX = 0.f, lastY = 0.f;
 
 };
-
