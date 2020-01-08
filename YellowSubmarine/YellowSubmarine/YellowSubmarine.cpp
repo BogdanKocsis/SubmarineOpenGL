@@ -272,15 +272,13 @@ int main(int argc, char** argv) {
 	Shader shaderSkybox(pathToSkyBoxShaders + "skybox.vs", pathToSkyBoxShaders + "skybox.fs");
 	buildSkybox(shaderCubeMap, shaderSkybox, pathToTextures);
 	// ** SKYBOX **
-
-	/*
+	
 	// ** WATER **
 	Shader shaderWater(pathToWaterShaders + "water.vs", pathToWaterShaders + "water.fs");
-
-	// ** WATER **
+	
 	const char* water = pathWater.c_str();
 	Model waterModel((GLchar*)water);
-	*/
+	// ** WATER **
 
 	// ** RENDER LOOP **
 	while (!glfwWindowShouldClose(window)) {
@@ -301,13 +299,7 @@ int main(int argc, char** argv) {
 		glm::mat4 view = pCamera->GetViewMatrix();
 		RenderSceneWithLight(shadowMappingDepthShader, shadowMappingShader, depthMap, depthMapFBO, lightPos, view, projection);
 
-		//renderScene(shadowMappingShader);
-
 		DrawSkybox(shaderSkybox, view, projection);
-
-		// ** WATER **
-
-		// ** WATER **
 
 		// ** MODEL **
 		DrawObject(shaderModel, submarineModel, view, projection, 0.5f);
@@ -318,10 +310,8 @@ int main(int argc, char** argv) {
 		
 		DrawAndRotateObject(shaderModel, propellerModel, view, projection, 0.5f, time, 2.0);
 
-		//RotateObject(propellerModel, projection);
-
 		DrawObject(shaderModel, terrainModel, view, projection, 0.2f);
-		//DrawObject(shaderModel, waterModel, view, projection, 0.2f);
+		DrawObject(shaderModel, waterModel, view, projection, 0.2f);
 		// ** MODEL **
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
