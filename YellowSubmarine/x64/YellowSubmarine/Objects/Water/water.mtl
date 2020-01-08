@@ -13,5 +13,7 @@ newmtl Water
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
 	d 0.1000 0.1000 0.1000
-	map_Ka water.png
-	map_Kd water.png
+	map_Ka waterColor.png
+	map_Kd waterColor.png
+	map_bump waterNormal.png
+	bump waterNormal.png

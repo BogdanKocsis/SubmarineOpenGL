@@ -11,7 +11,6 @@ std::string pathToTextures;
 std::string pathToShaders;
 std::string pathToObjects;
 
-std::string pathToNanosuit;
 std::string pathToSubmarine;
 std::string pathToDetachedSubmarine;
 
@@ -44,7 +43,6 @@ bool InitializePaths(std::string strFullExeFileName) {	//Initializes all the pat
 	pathToShaders = pathToExe + "\\Shaders\\";
 	pathToObjects = pathToExe + "\\Objects\\";
 
-	pathToNanosuit = pathToExe + "\\Objects\\Nanosuit\\";
 	pathToSubmarine = pathToExe + "\\Objects\\Submarine\\";
 	pathToDetachedSubmarine = pathToExe + "\\Objects\\SubmarinePropellor\\";
 	

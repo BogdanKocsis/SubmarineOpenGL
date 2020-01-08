@@ -233,14 +233,10 @@ int main(int argc, char** argv) {
 	Shader shaderModel(pathToObjectShaders + "modelLoading.vs", pathToObjectShaders + "modelLoading.frag");
 
 	// Load models
-	std::string pathNano = pathToNanosuit + "nanosuit.obj";
 	std::string pathSub = pathToDetachedSubmarine + "sub_obj.obj";
 	std::string pathProp = pathToDetachedSubmarine + "prop_obj.obj";
 	std::string pathTerrain = pathToTerrain + "terrain.obj";
 	std::string pathWater = pathToWater + "water.obj";
-
-	const char* nanosuit = pathNano.c_str();
-	Model nanoModel((GLchar*)nanosuit);
 
 	const char* submarine = pathSub.c_str();
 	Model submarineModel((GLchar*)submarine);
@@ -320,50 +316,8 @@ int main(int argc, char** argv) {
 	}
 	// ** RENDER LOOP **
 
-	/*
-	Shader ourShader("1.model_loading.vs", "1.model_loading.fs");
-	while (!glfwWindowShouldClose(window)) {
-		// per-frame time logic
-		// --------------------
-		float currentFrame = glfwGetTime();
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
-
-		// input
-		// -----
-		processInput(window);
-
-		// render
-		// ------
-		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// don't forget to enable shader before setting uniforms
-		ourShader.Use();
-
-		// view/projection transformations
-		glm::mat4 projection = glm::perspective(glm::radians(pCamera.GetZoom()), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-		glm::mat4 view = pCamera.GetViewMatrix();
-		ourShader.SetMat4("projection", projection);
-		ourShader.SetMat4("view", view);
-
-		// render the loaded model
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f)); // translate it down so it's at the center of the scene
-		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));	// it's a bit too big for our scene, so scale it down
-		shadowMappingShader.SetMat4("model", model);
-		ourModel.Draw(ourShader);
-
-
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		// -------------------------------------------------------------------------------
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	}
-	*/
-
 	// optional: de-allocate all resources once they've outlived their purpose:
-	//delete pCamera;
+	delete pCamera;
 
 	glfwTerminate();
 	return 0;
