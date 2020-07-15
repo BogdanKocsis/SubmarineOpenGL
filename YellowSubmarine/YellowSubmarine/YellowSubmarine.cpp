@@ -30,6 +30,7 @@
 #pragma comment (lib, "OpenGL32.lib")
 #pragma comment (lib, "assimp-vc140-mt.lib")
 
+
 bool DrawSkybox(Shader shaderSkybox, glm::mat4& view, glm::mat4& projection) {
 	// ** SKYBOX **
 
@@ -70,10 +71,13 @@ bool DrawObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat
 	shaderModel.SetMat4("view", view);
 	shaderModel.SetMat4("projection", projection);
 
+	
+
 	// Draw the loaded model
 	glm::mat4 model;
 	model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // Move to scene centre
 	model = glm::scale(model, glm::vec3(scaleFactor, scaleFactor, scaleFactor));	// Scale model
+	//model = glm::rotate(model, degrees, glm::vec3(0.0f, 1.0f, 0.0f));
 	shaderModel.SetMat4("model", model);
 	objectModel.Draw(shaderModel);
 	// ** MODEL **
@@ -81,7 +85,9 @@ bool DrawObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat
 	return true;
 }
 
-bool DrawAndRotateObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat4& projection, float scaleFactor, float time, float speedFactor) {
+
+
+bool DrawAndRotateSubmarineObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat4& projection, float scaleFactor, float time, float speedFactor) {
 	// ** MODEL **
 	shaderModel.Use();
 
@@ -95,12 +101,43 @@ bool DrawAndRotateObject(Shader shaderModel, Model objectModel, glm::mat4& view,
 	model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // Move to scene centre
 	model = glm::scale(model, glm::vec3(scaleFactor, scaleFactor, scaleFactor));	// Scale model
 
-	model = glm::rotate(
+	float degrees = 90 + glfwGetTime() / speedFactor;
+	//model = glm::rotate(
+	//	model,
+	//	time * glm::radians(180.0f) * speedFactor,
+	//	glm::vec3(0.0f, 0.0f, 1.0f)
+	//);
+
+	model=glm::rotate(model, degrees, glm::vec3(0.0f, 1.0f, 0.0f));
+	shaderModel.SetMat4("model", model);
+	objectModel.Draw(shaderModel);
+	// ** MODEL **
+
+	return true;
+}
+
+bool DrawAndRotateObject(Shader shaderModel, Model objectModel, glm::mat4& view, glm::mat4& projection, float scaleFactor, float time, float speedFactor) {
+	float degrees = 90 + glfwGetTime() / speedFactor;
+	
+	// ** MODEL **
+	shaderModel.Use();
+
+	view = pCamera->GetViewMatrix();
+
+	shaderModel.SetMat4("view", view);
+	shaderModel.SetMat4("projection", projection);
+
+	// Draw the loaded model
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // Move to scene centre
+	model = glm::scale(model, glm::vec3(scaleFactor, scaleFactor, scaleFactor));	// Scale model
+
+	/*model = glm::rotate(
 		model,
 		time * glm::radians(180.0f) * speedFactor,
 		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
-
+	);*/
+	 model = glm::rotate(model, degrees, glm::vec3(0.0f, 1.0f, 0.0f));
 	shaderModel.SetMat4("model", model);
 	objectModel.Draw(shaderModel);
 	// ** MODEL **
@@ -298,13 +335,14 @@ int main(int argc, char** argv) {
 		DrawSkybox(shaderSkybox, view, projection);
 
 		// ** MODEL **
-		DrawObject(shaderModel, submarineModel, view, projection, 0.5f);
+		//DrawObject(shaderModel, submarineModel, view, projection, 0.5f);
 		//DrawObject(shaderModel, propellerModel, view, projection, 0.5f);
 
 		auto t_now = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
 		
 		DrawAndRotateObject(shaderModel, propellerModel, view, projection, 0.5f, time, 2.0);
+		DrawAndRotateSubmarineObject(shaderModel, submarineModel, view, projection, 0.5f, time, 2.0);
 
 		DrawObject(shaderModel, terrainModel, view, projection, 0.2f);
 		DrawObject(shaderModel, waterModel, view, projection, 0.2f);

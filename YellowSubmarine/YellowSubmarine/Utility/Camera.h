@@ -6,6 +6,7 @@
 #include <GL/glew.h>
 
 const GLfloat ZOOM = 45.0f;
+const float SPEED = 7.0f;
 
 enum ECameraMovementType
 {
@@ -32,6 +33,7 @@ private:
 	const float PITCH = 0.0f;
 	const float FOV = 45.0f;
 
+
 public:
 
 	glm::vec3 startPosition;
@@ -52,6 +54,7 @@ public:
 	void ProcessMouseScroll(float yOffset);
 
 	GLfloat GetZoom();
+	
 	void ProcessMouseMovement(float xOffset, float yOffset, bool constrainPitch = true);
 
 private:

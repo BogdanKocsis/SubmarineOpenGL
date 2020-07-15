@@ -8,6 +8,7 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 
+
 Camera::Camera(const int width, const int height, const glm::vec3& position) {
 	startPosition = position;
 	m_zoom = ZOOM;
