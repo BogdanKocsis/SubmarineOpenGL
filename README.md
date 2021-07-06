@@ -7,15 +7,15 @@ This was an assingment for 3D Graphics module, which is a submarine simulation i
 
 
 <p align="center">
-<img src="https://github.com/BogdanKocsis/SubmarineOpenGL/blob/master/Resources/0.png" width="800" height="500" />
+<img src="https://github.com/BogdanKocsis/SubmarineOpenGL/blob/master/Resources/3.png" width="800" height="500" />
 </p>
 
 <p align="center">
-<img src="https://github.com/BogdanKocsis/SubmarineOpenGL/blob/master/Resources/1.png" width="800" height="500" />
+<img src="https://github.com/BogdanKocsis/SubmarineOpenGL/blob/master/Resources/4.png" width="800" height="500" />
 </p>
 
 <p align="center">
-<img src="https://github.com/BogdanKocsis/SubmarineOpenGL/blob/master/Resources/2.png" width="800" height="500" />
+<img src="https://github.com/BogdanKocsis/SubmarineOpenGL/blob/master/Resources/5.png" width="800" height="500" />
 </p>
 
 
